@@ -126,11 +126,16 @@
     // Nustatymų skiltis
     try {
     Lampa.SettingsApi.addComponent({ component: 'lt_trackers', name: 'LT Trackeriai', icon: '<svg viewBox="0 0 24 24" width="24" height="24"><circle cx="12" cy="12" r="9" fill="currentColor"/></svg>' });
-    ['lm_cookie', 'lm_passkey', 'lm_url', 'ta_url', 'ta_cookie'].forEach(function (name) {
+    var FIELDS = {
+      lm_cookie: ['Linkomanija slapukai', 'uid=...; pass=...'],
+      lm_passkey: ['Linkomanija passkey', 'passkey iš profilio'],
+      ta_cookie: ['Torrent.ai slapukai', 'slapukai iš naršyklės']
+    };
+    Object.keys(FIELDS).forEach(function (name) {
       Lampa.SettingsApi.addParam({
         component: 'lt_trackers',
-        param: { name: KEY + name, type: 'input', 'default': DEFAULTS[name] },
-        field: { name: name, description: '' },
+        param: { name: KEY + name, type: 'input', values: '', placeholder: FIELDS[name][1], 'default': '' },
+        field: { name: FIELDS[name][0], description: '' },
         onChange: function () {}
       });
     });
