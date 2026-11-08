@@ -10,9 +10,9 @@
   var DEFAULTS = {
     lm_cookie: '',   // pvz. "uid=123; pass=abcdef..."  (iš naršyklės po prisijungimo)
     lm_passkey: '',  // Linkomanija profilio passkey (reikalingas .torrent atsisiuntimui)
-    lm_url: 'https://www.linkomanija.net/browse.php?search={q}&incldead=0',
+    lm_url: 'https://www.linkomanija.net/browse.php?search={q}&submit.x=0&submit.y=0',
     ta_cookie: '',
-    ta_url: 'https://torrenta.ai/search?q={q}' // PATIKRINKITE tikrą paieškos URL
+    ta_url: 'https://torrent.ai/lt/torrents?search={q}'
   };
 
   function toBytes(txt) {
@@ -74,11 +74,12 @@
   }
 
   function searchLM(q, ok, fail) {
-    var url = cfg('lm_url', DEFAULTS.lm_url).replace('{q}', encodeURIComponent(q));
+    var url = DEFAULTS.lm_url.replace('{q}', encodeURIComponent(q).replace(/%20/g, '+'));
     var passkey = cfg('lm_passkey');
     fetchText(url, cfg('lm_cookie'), function (html) {
-      var res = parseHtml(html, url, 'a[href*="details.php?id="]', 'Linkomanija', function (a, row, base) {
-        var m = /id=(\d+)/.exec(a.getAttribute('href'));
+      if (/type=["']?password/i.test(html)) { fail(); return; }
+      var res = parseHtml(html, url, 'a[href*="details?"], a[href*="details.php"]', 'Linkomanija', function (a, row, base) {
+        var m = /details(?:\.php)?\?(?:id=)?(\d+)/.exec(a.getAttribute('href'));
         if (!m) return '';
         var dl = row.querySelector('a[href*="download.php"]');
         if (dl) return abs(base, dl.getAttribute('href')) + (passkey && dl.getAttribute('href').indexOf('passkey') < 0 ? '&passkey=' + passkey : '');
@@ -89,9 +90,9 @@
   }
 
   function searchTA(q, ok, fail) {
-    var url = cfg('ta_url', DEFAULTS.ta_url).replace('{q}', encodeURIComponent(q));
+    var url = DEFAULTS.ta_url.replace('{q}', encodeURIComponent(q).replace(/%20/g, '+'));
     fetchText(url, cfg('ta_cookie'), function (html) {
-      var res = parseHtml(html, url, 'a[href*="torrent"]:not([href^="magnet:"])', 'Torrenta', function (a, row, base) {
+      var res = parseHtml(html, url, 'a[href*="/lt/t"]', 'Torrent.ai', function (a, row, base) {
         var dl = row.querySelector('a[href$=".torrent"], a[href*="download"]');
         return dl ? abs(base, dl.getAttribute('href')) : '';
       });
