@@ -100,11 +100,14 @@
   }
 
   function start() {
+    try { Lampa.Noty.show('LT Trackeriai: papildinys įkeltas'); } catch (e) {}
     var original = Lampa.Parser.get;
 
     Lampa.Parser.get = function (params, oncomplete, onerror) {
-      var q = params.search || (params.movie && (params.movie.original_title || params.movie.title)) || '';
+      var q = (params.movie && (params.movie.original_title || params.movie.original_name)) || params.search || '';
       var all = [], pending = 2;
+      function note(t) { try { Lampa.Noty.show(t); } catch (e) {} }
+      note('LT paieška: ' + q);
 
       function done(list) {
         all = all.concat(list || []);
@@ -113,11 +116,14 @@
           oncomplete({ Results: all });
         }
       }
-      searchLM(q, done, function () { done([]); });
-      searchTA(q, done, function () { done([]); });
+      searchLM(q, function (l) { note('Linkomanija: ' + l.length); done(l); },
+        function () { note('Linkomanija: klaida (slapukai/tinklas)'); done([]); });
+      searchTA(q, function (l) { note('Torrenta: ' + l.length); done(l); },
+        function () { note('Torrenta: klaida (URL/tinklas)'); done([]); });
     };
 
     // Nustatymų skiltis
+    try {
     Lampa.SettingsApi.addComponent({ component: 'lt_trackers', name: 'LT Trackeriai', icon: '<svg viewBox="0 0 24 24" width="24" height="24"><circle cx="12" cy="12" r="9" fill="currentColor"/></svg>' });
     ['lm_cookie', 'lm_passkey', 'lm_url', 'ta_url', 'ta_cookie'].forEach(function (name) {
       Lampa.SettingsApi.addParam({
@@ -127,6 +133,7 @@
         onChange: function () {}
       });
     });
+    } catch (e) { console.log('LT settings error', e); }
 
     // Įjungiame, kad Lampa naudotų parserį ir rodytų torrentų mygtuką
     Lampa.Storage.set('parser_use', true);
