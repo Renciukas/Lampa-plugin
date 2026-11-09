@@ -9,9 +9,12 @@
     lm_cookie: '',   // pvz. 'login=XXXX; PHPSESSID=YYYY'
     lm_passkey: '',  // Linkomanija passkey
     ta_cookie: '',
+    ta_cookie2: '',
+    ta_cookie3: '',
     ta_passkey: ''
   };
   var TA_DIAG = '';
+  function taCookie() { return cfg('ta_cookie') + cfg('ta_cookie2') + cfg('ta_cookie3'); }
   function cfg(name, def) { return Lampa.Storage.get(KEY + name, '') || LOCAL[name] || def || ''; }
 
   // ---------- Nustatymai (galima keisti per Lampa.Storage arba žemiau esančiame meniu) ----------
@@ -20,6 +23,8 @@
     lm_passkey: '',  // Linkomanija profilio passkey (reikalingas .torrent atsisiuntimui)
     lm_url: 'https://www.linkomanija.net/browse.php?search={q}&submit.x=0&submit.y=0',
     ta_cookie: '',
+    ta_cookie2: '',
+    ta_cookie3: '',
     ta_url: 'https://torrent.ai/lt/torrents?search={q}'
   };
 
@@ -131,11 +136,11 @@
 
   function searchTA(q, ok, fail) {
     var url = DEFAULTS.ta_url.replace('{q}', encodeURIComponent(q).replace(/%20/g, '+'));
-    fetchText(url, cfg('ta_cookie'), function (html) {
+    fetchText(url, taCookie(), function (html) {
       var tpass = cfg('ta_passkey');
       var cnt = (html.match(/\/lt\/t\d+-/g) || []).length;
       var login = /type=["']?password/i.test(html);
-      TA_DIAG = html.length + ' B, nuorodų ' + cnt + (login ? ', reikia prisijungti' : '');
+      TA_DIAG = html.length + ' B, nuorodų ' + cnt + (login ? ', reikia prisijungti' : '') + ', slapuko ilgis ' + taCookie().length;
       var res = parseHtml(html, url, 'a[href*="/lt/t"]', 'Torrent.ai', function (a, row, base) {
         var m = /\/lt\/t(\d+)-/.exec(a.getAttribute('href') || '');
         if (!m) return '';
@@ -154,7 +159,7 @@
 
     Lampa.Parser.get = function (params, oncomplete, onerror) {
       var q = (params.movie && (params.movie.original_title || params.movie.original_name)) || params.search || '';
-      var useTA = !!(cfg('ta_cookie') || cfg('ta_passkey'));
+      var useTA = !!(taCookie() || cfg('ta_passkey'));
       var onlyLM = Lampa.Storage.get(KEY + 'mode', 'all') === 'lm';
       var pending = (onlyLM ? 1 : 2) + (useTA ? 1 : 0);
       var base = null, ours = [];
@@ -182,7 +187,7 @@
 
       // 3) Torrent.ai (tik jei įvesti slapukai)
       if (useTA) {
-        searchTA(q, function (l) { note('LT v6 | Torrent.ai: ' + l.length + ' | ' + TA_DIAG); ours = ours.concat(l); finish(); },
+        searchTA(q, function (l) { note('LT v7 | Torrent.ai: ' + l.length + ' | ' + TA_DIAG); ours = ours.concat(l); finish(); },
           function () { note('Torrent.ai: klaida'); finish(); });
       }
     };
@@ -193,7 +198,9 @@
     var FIELDS = {
       lm_cookie: ['Linkomanija slapukai', 'uid=...; pass=...'],
       lm_passkey: ['Linkomanija passkey', 'passkey iš profilio'],
-      ta_cookie: ['Torrent.ai slapukai', 'slapukai iš naršyklės'],
+      ta_cookie: ['Torrent.ai slapukas (1 dalis)', 'pradžia: PAVADINIMAS=reikšmė...'],
+      ta_cookie2: ['Torrent.ai slapukas (2 dalis)', 'tęsinys, jei reikia'],
+      ta_cookie3: ['Torrent.ai slapukas (3 dalis)', 'tęsinys, jei reikia'],
       ta_passkey: ['Torrent.ai passkey', 'passkey iš profilio']
     };
     Object.keys(FIELDS).forEach(function (name) {
