@@ -136,7 +136,11 @@
           oncomplete({ Results: all });
         }
       }
-      searchLM(q, function (l) { note('Linkomanija: ' + l.length); done(l); },
+      searchLM(q, function (l) {
+          note('Linkomanija: ' + l.length + ' | passkey: ' + (cfg('lm_passkey') ? 'yra' : 'NERA'));
+          if (l[0]) setTimeout(function () { note('Nuoroda: ' + (l[0].Link || l[0].MagnetUri).replace(/passkey=[^&]+/, 'passkey=***').substring(0, 120)); }, 2500);
+          done(l);
+        },
         function () { note('Linkomanija: klaida (slapukai/tinklas)'); done([]); });
       searchTA(q, function (l) { note('Torrenta: ' + l.length); done(l); },
         function () { note('Torrenta: klaida (URL/tinklas)'); done([]); });
