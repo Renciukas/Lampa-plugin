@@ -132,6 +132,11 @@
     var url = DEFAULTS.ta_url.replace('{q}', encodeURIComponent(q).replace(/%20/g, '+'));
     fetchText(url, cfg('ta_cookie'), function (html) {
       var tpass = cfg('ta_passkey');
+      try {
+        var cnt = (html.match(/\/lt\/t\d+-/g) || []).length;
+        var login = /type=["']?password/i.test(html);
+        Lampa.Noty.show('TA diag: ' + html.length + ' B, nuorodų ' + cnt + (login ? ', reikia prisijungti' : ''));
+      } catch (e) {}
       var res = parseHtml(html, url, 'a[href*="/lt/t"]', 'Torrent.ai', function (a, row, base) {
         var m = /\/lt\/t(\d+)-/.exec(a.getAttribute('href') || '');
         if (!m) return '';
