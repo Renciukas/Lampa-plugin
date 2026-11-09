@@ -125,25 +125,34 @@
 
     Lampa.Parser.get = function (params, oncomplete, onerror) {
       var q = (params.movie && (params.movie.original_title || params.movie.original_name)) || params.search || '';
-      var all = [], pending = 2;
+      var useTA = !!cfg('ta_cookie');
+      var pending = 2 + (useTA ? 1 : 0);
+      var base = null, ours = [];
       function note(t) { try { Lampa.Noty.show(t); } catch (e) {} }
-      note('LT paieška: ' + q);
 
-      function done(list) {
-        all = all.concat(list || []);
-        if (--pending === 0) {
-          all.sort(function (a, b) { return b.Seeders - a.Seeders; });
-          oncomplete({ Results: all });
-        }
+      function finish() {
+        if (--pending > 0) return;
+        var out = base || {};
+        var results = (out.Results || []).concat(ours);
+        results.sort(function (a, b) { return (b.Seeders || 0) - (a.Seeders || 0); });
+        out.Results = results;
+        oncomplete(out);
       }
-      searchLM(q, function (l) {
-          note('Linkomanija: ' + l.length + ' | passkey: ' + (cfg('lm_passkey') ? 'yra' : 'NERA'));
-          if (l[0]) setTimeout(function () { note('Nuoroda: ' + (l[0].Link || l[0].MagnetUri).replace(/passkey=[^&]+/, 'passkey=***').substring(0, 120)); }, 2500);
-          done(l);
-        },
-        function () { note('Linkomanija: klaida (slapukai/tinklas)'); done([]); });
-      searchTA(q, function (l) { note('Torrenta: ' + l.length); done(l); },
-        function () { note('Torrenta: klaida (URL/tinklas)'); done([]); });
+
+      // 1) standartinis Lampa parseris (jac.red, Jackett ir kt.)
+      try {
+        original.call(Lampa.Parser, params, function (d) { base = d; finish(); }, function () { finish(); });
+      } catch (e) { finish(); }
+
+      // 2) Linkomanija
+      searchLM(q, function (l) { ours = ours.concat(l); finish(); },
+        function () { note('Linkomanija: klaida (slapukai/tinklas)'); finish(); });
+
+      // 3) Torrent.ai (tik jei įvesti slapukai)
+      if (useTA) {
+        searchTA(q, function (l) { ours = ours.concat(l); finish(); },
+          function () { note('Torrent.ai: klaida'); finish(); });
+      }
     };
 
     // Nustatymų skiltis
