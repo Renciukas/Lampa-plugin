@@ -178,7 +178,7 @@
 
       // 3) Torrent.ai (tik jei įvesti slapukai)
       if (useTA) {
-        searchTA(q, function (l) { ours = ours.concat(l); finish(); },
+        searchTA(q, function (l) { note('Torrent.ai: ' + l.length + ' rezultatų'); ours = ours.concat(l); finish(); },
           function () { note('Torrent.ai: klaida'); finish(); });
       }
     };
