@@ -8,7 +8,8 @@
   var LOCAL = {
     lm_cookie: '',   // pvz. 'login=XXXX; PHPSESSID=YYYY'
     lm_passkey: '',  // Linkomanija passkey
-    ta_cookie: ''
+    ta_cookie: '',
+    ta_passkey: ''
   };
   function cfg(name, def) { return Lampa.Storage.get(KEY + name, '') || LOCAL[name] || def || ''; }
 
@@ -33,15 +34,33 @@
     try { return new URL(href, base).href; } catch (e) { return href; }
   }
 
+  // Suranda visą torrento eilutę (lentelės arba div), kurioje yra tik vienas torrentas
+  function findRow(a, idRe, linkSel) {
+    var cur = a, best = a.parentNode || a;
+    for (var d = 0; d < 8; d++) {
+      var p = cur.parentNode;
+      if (!p || p.nodeType !== 1 || /^(BODY|HTML)$/i.test(p.tagName)) break;
+      var ids = {}, n = 0, ls = p.querySelectorAll(linkSel);
+      for (var j = 0; j < ls.length; j++) {
+        var m = idRe.exec(ls[j].getAttribute('href') || '');
+        if (m && !ids[m[1]]) { ids[m[1]] = 1; n++; }
+      }
+      if (n > 1) break;
+      best = p; cur = p;
+    }
+    return best;
+  }
+
   // Bendras HTML lentelės parseris su euristika
-  function parseHtml(html, base, linkSel, tracker, buildLink) {
+  function parseHtml(html, base, linkSel, tracker, buildLink, idRe) {
     var doc = new DOMParser().parseFromString(html, 'text/html');
     var out = [];
     var all = doc.querySelectorAll(linkSel);
     var rows = [], best = [];
     for (var k = 0; k < all.length; k++) {
       var an = all[k];
-      var rw = an.closest('tr') || an.parentNode;
+      if (idRe && !idRe.test(an.getAttribute('href') || '')) continue;
+      var rw = idRe ? findRow(an, idRe, linkSel) : (an.closest('tr') || an.parentNode);
       if (!rw) continue;
       var tx = (an.getAttribute('title') || an.textContent || '').trim();
       if (tx.length < 6 || /^\d+$/.test(tx)) continue;
@@ -61,6 +80,7 @@
         if (/^\d+$/.test(t)) nums.push(parseInt(t, 10));
         if (/[\d.,]+\s*(TB|GB|MB|KB)/i.test(t)) sizeTxt = t;
       }
+      if (!sizeTxt) { var mm = /[\d.,]+\s*(TB|GB|MB|KB)/i.exec(row.textContent || ''); if (mm) sizeTxt = mm[0]; }
       var seeders = nums.length >= 2 ? nums[nums.length - 2] : 0;
       var leech = nums.length >= 2 ? nums[nums.length - 1] : 0;
 
@@ -111,10 +131,15 @@
   function searchTA(q, ok, fail) {
     var url = DEFAULTS.ta_url.replace('{q}', encodeURIComponent(q).replace(/%20/g, '+'));
     fetchText(url, cfg('ta_cookie'), function (html) {
+      var tpass = cfg('ta_passkey');
       var res = parseHtml(html, url, 'a[href*="/lt/t"]', 'Torrent.ai', function (a, row, base) {
-        var dl = row.querySelector('a[href$=".torrent"], a[href*="download"]');
-        return dl ? abs(base, dl.getAttribute('href')) : '';
-      });
+        var m = /\/lt\/t(\d+)-/.exec(a.getAttribute('href') || '');
+        if (!m) return '';
+        var dl = row.querySelector('a[href*="/download"]');
+        var h = dl ? abs(base, dl.getAttribute('href')) : abs(base, '/lt/download?id=' + m[1]);
+        if (tpass && h.indexOf('passkey') < 0) h += (h.indexOf('?') < 0 ? '?' : '&') + 'passkey=' + tpass;
+        return h;
+      }, /\/lt\/t(\d+)-/);
       ok(res);
     }, fail);
   }
@@ -125,7 +150,7 @@
 
     Lampa.Parser.get = function (params, oncomplete, onerror) {
       var q = (params.movie && (params.movie.original_title || params.movie.original_name)) || params.search || '';
-      var useTA = !!cfg('ta_cookie');
+      var useTA = !!(cfg('ta_cookie') || cfg('ta_passkey'));
       var onlyLM = Lampa.Storage.get(KEY + 'mode', 'all') === 'lm';
       var pending = (onlyLM ? 1 : 2) + (useTA ? 1 : 0);
       var base = null, ours = [];
@@ -164,7 +189,8 @@
     var FIELDS = {
       lm_cookie: ['Linkomanija slapukai', 'uid=...; pass=...'],
       lm_passkey: ['Linkomanija passkey', 'passkey iš profilio'],
-      ta_cookie: ['Torrent.ai slapukai', 'slapukai iš naršyklės']
+      ta_cookie: ['Torrent.ai slapukai', 'slapukai iš naršyklės'],
+      ta_passkey: ['Torrent.ai passkey', 'passkey iš profilio']
     };
     Object.keys(FIELDS).forEach(function (name) {
       Lampa.SettingsApi.addParam({
