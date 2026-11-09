@@ -4,7 +4,13 @@
   'use strict';
 
   var KEY = 'lt_trackers_';
-  function cfg(name, def) { return Lampa.Storage.get(KEY + name, def || ''); }
+  // ĮRAŠYKITE SAVO DUOMENIS ČIA (tik vietinėje kopijoje savo kompiuteryje, NE GitHub):
+  var LOCAL = {
+    lm_cookie: '',   // pvz. 'login=XXXX; PHPSESSID=YYYY'
+    lm_passkey: '',  // Linkomanija passkey
+    ta_cookie: ''
+  };
+  function cfg(name, def) { return Lampa.Storage.get(KEY + name, '') || LOCAL[name] || def || ''; }
 
   // ---------- Nustatymai (galima keisti per Lampa.Storage arba žemiau esančiame meniu) ----------
   var DEFAULTS = {
@@ -31,13 +37,22 @@
   function parseHtml(html, base, linkSel, tracker, buildLink) {
     var doc = new DOMParser().parseFromString(html, 'text/html');
     var out = [];
-    var links = doc.querySelectorAll(linkSel);
-    for (var i = 0; i < links.length; i++) {
-      var a = links[i];
-      var row = a.closest('tr') || a.parentNode;
-      if (!row) continue;
-      var title = (a.getAttribute('title') || a.textContent || '').trim();
-      if (!title) continue;
+    var all = doc.querySelectorAll(linkSel);
+    var rows = [], best = [];
+    for (var k = 0; k < all.length; k++) {
+      var an = all[k];
+      var rw = an.closest('tr') || an.parentNode;
+      if (!rw) continue;
+      var tx = (an.getAttribute('title') || an.textContent || '').trim();
+      if (tx.length < 6 || /^\d+$/.test(tx)) continue;
+      var ix = rows.indexOf(rw);
+      if (ix < 0) { rows.push(rw); best.push({ a: an, t: tx }); }
+      else if (tx.length > best[ix].t.length) { best[ix] = { a: an, t: tx }; }
+    }
+    for (var i = 0; i < rows.length; i++) {
+      var a = best[i].a;
+      var row = rows[i];
+      var title = best[i].t;
 
       var cells = row.querySelectorAll('td');
       var nums = [], sizeTxt = '';
@@ -81,8 +96,12 @@
       var res = parseHtml(html, url, 'a[href*="details?"], a[href*="details.php"]', 'Linkomanija', function (a, row, base) {
         var m = /details(?:\.php)?\?(?:id=)?(\d+)/.exec(a.getAttribute('href'));
         if (!m) return '';
-        var dl = row.querySelector('a[href*="download.php"]');
-        if (dl) return abs(base, dl.getAttribute('href')) + (passkey && dl.getAttribute('href').indexOf('passkey') < 0 ? '&passkey=' + passkey : '');
+        var dl = row.querySelector('a[href*="download"]');
+        if (dl) {
+          var h = abs(base, dl.getAttribute('href'));
+          if (passkey && h.indexOf('passkey') < 0) h += (h.indexOf('?') < 0 ? '?' : '&') + 'passkey=' + passkey;
+          return h;
+        }
         return abs(base, 'download.php?id=' + m[1] + (passkey ? '&passkey=' + passkey : ''));
       });
       ok(res);
