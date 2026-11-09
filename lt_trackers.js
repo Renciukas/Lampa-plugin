@@ -11,6 +11,7 @@
     ta_cookie: '',
     ta_passkey: ''
   };
+  var TA_DIAG = '';
   function cfg(name, def) { return Lampa.Storage.get(KEY + name, '') || LOCAL[name] || def || ''; }
 
   // ---------- Nustatymai (galima keisti per Lampa.Storage arba žemiau esančiame meniu) ----------
@@ -132,11 +133,9 @@
     var url = DEFAULTS.ta_url.replace('{q}', encodeURIComponent(q).replace(/%20/g, '+'));
     fetchText(url, cfg('ta_cookie'), function (html) {
       var tpass = cfg('ta_passkey');
-      try {
-        var cnt = (html.match(/\/lt\/t\d+-/g) || []).length;
-        var login = /type=["']?password/i.test(html);
-        Lampa.Noty.show('TA diag: ' + html.length + ' B, nuorodų ' + cnt + (login ? ', reikia prisijungti' : ''));
-      } catch (e) {}
+      var cnt = (html.match(/\/lt\/t\d+-/g) || []).length;
+      var login = /type=["']?password/i.test(html);
+      TA_DIAG = html.length + ' B, nuorodų ' + cnt + (login ? ', reikia prisijungti' : '');
       var res = parseHtml(html, url, 'a[href*="/lt/t"]', 'Torrent.ai', function (a, row, base) {
         var m = /\/lt\/t(\d+)-/.exec(a.getAttribute('href') || '');
         if (!m) return '';
@@ -183,7 +182,7 @@
 
       // 3) Torrent.ai (tik jei įvesti slapukai)
       if (useTA) {
-        searchTA(q, function (l) { note('Torrent.ai: ' + l.length + ' rezultatų'); ours = ours.concat(l); finish(); },
+        searchTA(q, function (l) { note('LT v6 | Torrent.ai: ' + l.length + ' | ' + TA_DIAG); ours = ours.concat(l); finish(); },
           function () { note('Torrent.ai: klaida'); finish(); });
       }
     };
