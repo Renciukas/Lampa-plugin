@@ -139,12 +139,14 @@
   }
 
   function searchTA(q, ok, fail) {
-    var url = DEFAULTS.ta_url.replace('{q}', encodeURIComponent(q).replace(/%20/g, '+'));
+    var qq = q.replace(/[:\-\u2013\u2014'"!?.,()&]+/g, ' ').replace(/\s+/g, ' ').trim();
+    var url = DEFAULTS.ta_url.replace('{q}', encodeURIComponent(qq).replace(/%20/g, '+'));
     fetchText(url, taCookie(), function (html) {
       var tpass = cfg('ta_passkey');
       var cnt = (html.match(/\/lt\/t\d+-/g) || []).length;
       var login = /type=["']?password/i.test(html);
-      TA_DIAG = html.length + ' B, nuorodų ' + cnt + (login ? ', reikia prisijungti' : '') + ', slapuko ilgis ' + taCookie().length;
+      var smp = /href=["']([^"']*\d{6,}[^"']*)["']/.exec(html);
+      TA_DIAG = html.length + ' B, nuorodų ' + cnt + (login ? ', reikia prisijungti' : '') + ', q=' + qq + (smp ? ', pvz ' + smp[1].substring(0, 60) : '');
       var res = parseHtml(html, url, 'a[href*="/lt/t"]', 'Torrent.ai', function (a, row, base) {
         var m = /\/lt\/t(\d+)-/.exec(a.getAttribute('href') || '');
         if (!m) return '';
@@ -191,7 +193,7 @@
 
       // 3) Torrent.ai (tik jei įvesti slapukai)
       if (useTA) {
-        searchTA(q, function (l) { note('LT v8 | Torrent.ai: ' + l.length + ' | ' + TA_DIAG); ours = ours.concat(l); finish(); },
+        searchTA(q, function (l) { note('LT v9 | Torrent.ai: ' + l.length + ' | ' + TA_DIAG); ours = ours.concat(l); finish(); },
           function () { note('Torrent.ai: klaida'); finish(); });
       }
     };
