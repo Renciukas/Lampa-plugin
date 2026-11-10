@@ -176,9 +176,16 @@
           net.native(link, function (r) {
             var info = typeof r;
             if (typeof r === 'string') {
-              var head = r.substring(0, 30).replace(/[\u0000-\u001f\ufffd]/g, '?');
-              var kind = /^d\d+:/.test(r) ? 'TORRENT?' : (/<html|<!doctype/i.test(r) ? 'HTML' : 'kita');
-              info += ' len=' + r.length + ' ' + kind + ' [' + head + ']';
+              var hi = 0, ff = 0, mx = 0;
+              for (var ci = 0; ci < r.length; ci++) {
+                var cc = r.charCodeAt(ci);
+                if (cc > mx) mx = cc;
+                if (cc > 255) hi++;
+                if (cc === 0xFFFD) ff++;
+              }
+              var pm = /6:pieces(\d+):/.exec(r);
+              var integ = pm ? ' pieces=' + pm[1] + ' tail=' + (r.length - (pm.index + pm[0].length) - parseInt(pm[1], 10)) : ' pieces?';
+              info += ' len=' + r.length + ' max=' + mx + ' >255:' + hi + ' FFFD:' + ff + integ;
             }
             note('TEST ' + label + ': ' + info);
           }, function (e) {
