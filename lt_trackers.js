@@ -143,7 +143,7 @@
     var url = DEFAULTS.ta_url.replace('{q}', encodeURIComponent(qq).replace(/%20/g, '+'));
     fetchText(url, taCookie(), function (html) {
       var tpass = cfg('ta_passkey');
-      var cnt = (html.match(/\/lt\/t\d+-/g) || []).length;
+      var cnt = (html.match(/href=["'](?:[^"']*\/)?t\d{5,}-/g) || []).length;
       var login = /type=["']?password/i.test(html);
       var hr = html.match(/href=["'][^"']+["']/g) || [], smp2 = [];
       for (var hi = 0; hi < hr.length && smp2.length < 2; hi++) {
@@ -152,14 +152,14 @@
         if (/\d{5,}/.test(hh)) smp2.push(hh.substring(0, 50));
       }
       TA_DIAG = html.length + ' B, nuorodų ' + cnt + (login ? ', reikia prisijungti' : '') + ', q=' + qq + (smp2.length ? ', pvz ' + smp2.join(' | ') : ', pvz nėra');
-      var res = parseHtml(html, url, 'a[href*="/lt/t"]', 'Torrent.ai', function (a, row, base) {
-        var m = /\/lt\/t(\d+)-/.exec(a.getAttribute('href') || '');
+      var res = parseHtml(html, url, 'a[href]', 'Torrent.ai', function (a, row, base) {
+        var m = /(?:^|\/)t(\d{5,})-/.exec(a.getAttribute('href') || '');
         if (!m) return '';
         var dl = row.querySelector('a[href*="/download"]');
         var h = dl ? abs(base, dl.getAttribute('href')) : abs(base, '/lt/download?id=' + m[1]);
         if (tpass && h.indexOf('passkey') < 0) h += (h.indexOf('?') < 0 ? '?' : '&') + 'passkey=' + tpass;
         return h;
-      }, /\/lt\/t(\d+)-/);
+      }, /(?:^|\/)t(\d{5,})-/);
       ok(res);
     }, fail);
   }
@@ -198,7 +198,7 @@
 
       // 3) Torrent.ai (tik jei įvesti slapukai)
       if (useTA) {
-        searchTA(q, function (l) { note('LT v10 | Torrent.ai: ' + l.length + ' | ' + TA_DIAG); ours = ours.concat(l); finish(); },
+        searchTA(q, function (l) { note('LT v11 | Torrent.ai: ' + l.length + ' | ' + TA_DIAG); ours = ours.concat(l); finish(); },
           function () { note('Torrent.ai: klaida'); finish(); });
       }
     };
