@@ -164,6 +164,32 @@
     }, fail);
   }
 
+  // Techninis testas: ar Lampa gali gauti .torrent failą nesugadintą
+  function probeTorrent(link, note) {
+    function run(dt, delay) {
+      setTimeout(function () {
+        try {
+          var net = new Lampa.Reguest();
+          net.native(link, function (r) {
+            var info = typeof r;
+            if (typeof r === 'string') {
+              info += ' len=' + r.length + ' head=' + JSON.stringify(r.substring(0, 11)) + ' bad=' + (r.match(/\uFFFD/g) || []).length;
+            } else if (r && r.byteLength != null) {
+              info += ' bytes=' + r.byteLength;
+            } else if (r) {
+              info += ' ' + Object.prototype.toString.call(r);
+            }
+            note('TEST ' + dt + ': ' + info);
+          }, function (e) {
+            note('TEST ' + dt + ' klaida: ' + (e && (e.status || e.statusText || e.message) || e));
+          }, false, { dataType: dt });
+        } catch (ex) { note('TEST ' + dt + ' išimtis: ' + ex.message); }
+      }, delay);
+    }
+    run('text', 3000);
+    run('arraybuffer', 8000);
+  }
+
   function start() {
     try { Lampa.Noty.show('LT Trackeriai: papildinys įkeltas'); } catch (e) {}
     var original = Lampa.Parser.get;
@@ -199,6 +225,7 @@
       // 3) Torrent.ai (tik jei įvesti slapukai)
       if (useTA) {
         searchTA(q, function (l) {
+          if (l[0] && Lampa.Storage.get(KEY + 'ta_mode', 'on') === 'test') probeTorrent(l[0].Link, note);
           ours = ours.concat(l); finish();
         },
           function () { note('Torrent.ai: klaida'); finish(); });
@@ -232,7 +259,7 @@
     });
     Lampa.SettingsApi.addParam({
       component: 'lt_trackers',
-      param: { name: KEY + 'ta_mode', type: 'select', values: { on: 'Įjungta', off: 'Išjungta' }, 'default': 'on' },
+      param: { name: KEY + 'ta_mode', type: 'select', values: { on: 'Įjungta', off: 'Išjungta', test: 'Įjungta + techninis testas' }, 'default': 'on' },
       field: { name: 'Torrent.ai paieška', description: 'Įjungta: rodo Torrent.ai rezultatus (paleidimas gali nepavykti)' },
       onChange: function () {}
     });
