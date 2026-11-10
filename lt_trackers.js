@@ -164,30 +164,30 @@
     }, fail);
   }
 
-  // Techninis testas: ar Lampa gali gauti .torrent failą nesugadintą
+  // Techninis testas: ar su slapuku gaunamas tikras .torrent failas
   function probeTorrent(link, note) {
-    function run(dt, delay) {
+    function run(withCookie, delay) {
       setTimeout(function () {
         try {
           var net = new Lampa.Reguest();
+          var label = withCookie ? 'su slapuku' : 'be slapuko';
+          var opts = { dataType: 'text' };
+          if (withCookie) opts.headers = { Cookie: taCookie() };
           net.native(link, function (r) {
             var info = typeof r;
             if (typeof r === 'string') {
-              info += ' len=' + r.length + ' head=' + JSON.stringify(r.substring(0, 11)) + ' bad=' + (r.match(/\uFFFD/g) || []).length;
-            } else if (r && r.byteLength != null) {
-              info += ' bytes=' + r.byteLength;
-            } else if (r) {
-              info += ' ' + Object.prototype.toString.call(r);
+              var head = r.substring(0, 30).replace(/[\u0000-\u001f\ufffd]/g, '?');
+              var kind = /^d\d+:/.test(r) ? 'TORRENT?' : (/<html|<!doctype/i.test(r) ? 'HTML' : 'kita');
+              info += ' len=' + r.length + ' ' + kind + ' [' + head + ']';
             }
-            note('TEST ' + dt + ': ' + info);
+            note('TEST ' + label + ': ' + info);
           }, function (e) {
-            note('TEST ' + dt + ' klaida: ' + (e && (e.status || e.statusText || e.message) || e));
-          }, false, { dataType: dt });
-        } catch (ex) { note('TEST ' + dt + ' išimtis: ' + ex.message); }
+            note('TEST ' + label + ' klaida: ' + (e && (e.status || e.statusText || e.message) || e));
+          }, false, opts);
+        } catch (ex) { note('TEST išimtis: ' + ex.message); }
       }, delay);
     }
-    run('text', 3000);
-    run('arraybuffer', 8000);
+    run(true, 3000);
   }
 
   function start() {
