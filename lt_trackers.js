@@ -164,46 +164,13 @@
     }, fail);
   }
 
-  // Techninis testas: ar su slapuku gaunamas tikras .torrent failas
-  function probeTorrent(link, note) {
-    function run(withCookie, delay) {
-      setTimeout(function () {
-        try {
-          var net = new Lampa.Reguest();
-          var label = withCookie ? 'su slapuku' : 'be slapuko';
-          var opts = { dataType: 'text' };
-          if (withCookie) opts.headers = { Cookie: taCookie() };
-          net.native(link, function (r) {
-            var info = typeof r;
-            if (typeof r === 'string') {
-              var hi = 0, ff = 0, mx = 0;
-              for (var ci = 0; ci < r.length; ci++) {
-                var cc = r.charCodeAt(ci);
-                if (cc > mx) mx = cc;
-                if (cc > 255) hi++;
-                if (cc === 0xFFFD) ff++;
-              }
-              var pm = /6:pieces(\d+):/.exec(r);
-              var integ = pm ? ' pieces=' + pm[1] + ' tail=' + (r.length - (pm.index + pm[0].length) - parseInt(pm[1], 10)) : ' pieces?';
-              info += ' len=' + r.length + ' max=' + mx + ' >255:' + hi + ' FFFD:' + ff + integ;
-            }
-            note('TEST ' + label + ': ' + info);
-          }, function (e) {
-            note('TEST ' + label + ' klaida: ' + (e && (e.status || e.statusText || e.message) || e));
-          }, false, opts);
-        } catch (ex) { note('TEST išimtis: ' + ex.message); }
-      }, delay);
-    }
-    run(true, 3000);
-  }
-
   function start() {
     try { Lampa.Noty.show('LT Trackeriai: papildinys įkeltas'); } catch (e) {}
     var original = Lampa.Parser.get;
 
     Lampa.Parser.get = function (params, oncomplete, onerror) {
       var q = (params.movie && (params.movie.original_title || params.movie.original_name)) || params.search || '';
-      var useTA = Lampa.Storage.get(KEY + 'ta_mode', 'on') !== 'off' && !!(taCookie() || cfg('ta_passkey'));
+      var useTA = Lampa.Storage.get(KEY + 'ta_mode', 'off') === 'on' && !!(taCookie() || cfg('ta_passkey'));
       var onlyLM = Lampa.Storage.get(KEY + 'mode', 'all') === 'lm';
       var pending = (onlyLM ? 1 : 2) + (useTA ? 1 : 0);
       var base = null, ours = [];
@@ -232,7 +199,6 @@
       // 3) Torrent.ai (tik jei įvesti slapukai)
       if (useTA) {
         searchTA(q, function (l) {
-          if (l[0] && Lampa.Storage.get(KEY + 'ta_mode', 'on') === 'test') probeTorrent(l[0].Link, note);
           ours = ours.concat(l); finish();
         },
           function () { note('Torrent.ai: klaida'); finish(); });
@@ -266,8 +232,8 @@
     });
     Lampa.SettingsApi.addParam({
       component: 'lt_trackers',
-      param: { name: KEY + 'ta_mode', type: 'select', values: { on: 'Įjungta', off: 'Išjungta', test: 'Įjungta + techninis testas' }, 'default': 'on' },
-      field: { name: 'Torrent.ai paieška', description: 'Įjungta: rodo Torrent.ai rezultatus (paleidimas gali nepavykti)' },
+      param: { name: KEY + 'ta_mode', type: 'select', values: { off: 'Išjungta', on: 'Įjungta (paleidimas negalimas)' }, 'default': 'off' },
+      field: { name: 'Torrent.ai paieška', description: 'Torrent.ai torrentų per TorrServer paleisti nepavyksta' },
       onChange: function () {}
     });
     } catch (e) { console.log('LT settings error', e); }
