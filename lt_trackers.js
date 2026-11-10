@@ -198,7 +198,11 @@
 
       // 3) Torrent.ai (tik jei įvesti slapukai)
       if (useTA) {
-        searchTA(q, function (l) { note('LT v11 | Torrent.ai: ' + l.length + ' | ' + TA_DIAG); ours = ours.concat(l); finish(); },
+        searchTA(q, function (l) {
+          note('LT v12 | Torrent.ai: ' + l.length);
+          if (l[0]) setTimeout(function () { note('TA nuoroda: ' + (l[0].Link || '(tuščia)').replace(/passkey=[^&]+/, 'passkey=***').substring(0, 110)); }, 3500);
+          ours = ours.concat(l); finish();
+        },
           function () { note('Torrent.ai: klaida'); finish(); });
       }
     };
