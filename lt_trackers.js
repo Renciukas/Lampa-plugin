@@ -14,7 +14,11 @@
     ta_passkey: ''
   };
   var TA_DIAG = '';
-  function taCookie() { return cfg('ta_cookie') + cfg('ta_cookie2') + cfg('ta_cookie3'); }
+  function taCookie() {
+    var c = cfg('ta_cookie') + cfg('ta_cookie2') + cfg('ta_cookie3');
+    // Automatinis pavadinimo pataisymas (jei įvestas pavadinimas neteisingas / sutrumpintas)
+    return c.replace(/^ZwDQmzPeN[^=]*=/, 'ZwDQmzPeNOgy=');
+  }
   function cfg(name, def) { return Lampa.Storage.get(KEY + name, '') || LOCAL[name] || def || ''; }
 
   // ---------- Nustatymai (galima keisti per Lampa.Storage arba žemiau esančiame meniu) ----------
@@ -187,7 +191,7 @@
 
       // 3) Torrent.ai (tik jei įvesti slapukai)
       if (useTA) {
-        searchTA(q, function (l) { note('LT v7 | Torrent.ai: ' + l.length + ' | ' + TA_DIAG); ours = ours.concat(l); finish(); },
+        searchTA(q, function (l) { note('LT v8 | Torrent.ai: ' + l.length + ' | ' + TA_DIAG); ours = ours.concat(l); finish(); },
           function () { note('Torrent.ai: klaida'); finish(); });
       }
     };
