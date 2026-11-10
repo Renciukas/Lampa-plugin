@@ -170,7 +170,7 @@
 
     Lampa.Parser.get = function (params, oncomplete, onerror) {
       var q = (params.movie && (params.movie.original_title || params.movie.original_name)) || params.search || '';
-      var useTA = !!(taCookie() || cfg('ta_passkey'));
+      var useTA = Lampa.Storage.get(KEY + 'ta_mode', 'on') !== 'off' && !!(taCookie() || cfg('ta_passkey'));
       var onlyLM = Lampa.Storage.get(KEY + 'mode', 'all') === 'lm';
       var pending = (onlyLM ? 1 : 2) + (useTA ? 1 : 0);
       var base = null, ours = [];
@@ -199,8 +199,6 @@
       // 3) Torrent.ai (tik jei įvesti slapukai)
       if (useTA) {
         searchTA(q, function (l) {
-          note('LT v12 | Torrent.ai: ' + l.length);
-          if (l[0]) setTimeout(function () { note('TA nuoroda: ' + (l[0].Link || '(tuščia)').replace(/passkey=[^&]+/, 'passkey=***').substring(0, 110)); }, 3500);
           ours = ours.concat(l); finish();
         },
           function () { note('Torrent.ai: klaida'); finish(); });
@@ -230,6 +228,12 @@
       component: 'lt_trackers',
       param: { name: KEY + 'mode', type: 'select', values: { all: 'Viskas kartu', lm: 'Tik Linkomanija' }, 'default': 'all' },
       field: { name: 'Šaltiniai', description: 'Viskas kartu = ir kiti parseriai (jac.red ir kt.)' },
+      onChange: function () {}
+    });
+    Lampa.SettingsApi.addParam({
+      component: 'lt_trackers',
+      param: { name: KEY + 'ta_mode', type: 'select', values: { on: 'Įjungta', off: 'Išjungta' }, 'default': 'on' },
+      field: { name: 'Torrent.ai paieška', description: 'Įjungta: rodo Torrent.ai rezultatus (paleidimas gali nepavykti)' },
       onChange: function () {}
     });
     } catch (e) { console.log('LT settings error', e); }
