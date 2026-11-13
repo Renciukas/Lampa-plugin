@@ -122,7 +122,7 @@
     var url = DEFAULTS.lm_url.replace('{q}', encodeURIComponent(q).replace(/%20/g, '+'));
     var passkey = cfg('lm_passkey');
     fetchText(url, cfg('lm_cookie'), function (html) {
-      if (/type=["']?password/i.test(html)) { fail(); return; }
+      if (/type=["']?password/i.test(html)) { fail('login'); return; }
       var res = parseHtml(html, url, 'a[href*="details?"], a[href*="details.php"]', 'Linkomanija', function (a, row, base) {
         var m = /details(?:\.php)?\?(?:id=)?(\d+)/.exec(a.getAttribute('href'));
         if (!m) return '';
@@ -194,7 +194,11 @@
 
       // 2) Linkomanija
       searchLM(q, function (l) { ours = ours.concat(l); finish(); },
-        function () { note('Linkomanija: klaida (slapukai/tinklas)'); finish(); });
+        function (e) {
+          if (e === 'login') note('Linkomanija: slapukas nebetinka (gautas prisijungimo puslapis)');
+          else note('Linkomanija: tinklo klaida ' + (e && (e.status || e.statusText || e.message) || ''));
+          finish();
+        });
 
       // 3) Torrent.ai (tik jei įvesti slapukai)
       if (useTA) {
